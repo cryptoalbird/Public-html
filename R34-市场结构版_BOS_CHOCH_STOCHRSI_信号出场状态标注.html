@@ -523,7 +523,7 @@ body { background: #0a1929; font-family: 'Segoe UI','PingFang SC',Roboto,Arial,s
       <div class="rtc-grid">
         <div class="rtc-item"><span class="label">入场价</span><span class="value entry" id="rtcEntry">--</span></div>
         <div class="rtc-item"><span class="label">止损价</span><span class="value sl" id="rtcSL">--</span></div>
-        <div class="rtc-item"><span class="label">止盈(1R平半/最高7R)</span><span class="value tp" id="rtcTP">--</span></div>
+        <div class="rtc-item"><span class="label">止盈(1.5R平半/最高7R)</span><span class="value tp" id="rtcTP">--</span></div>
       </div>
       <div class="rtc-item" style="margin-top:4px;"><span class="label">信号时间</span><span class="value time" id="rtcTime">--</span></div>
     </div>
@@ -531,7 +531,7 @@ body { background: #0a1929; font-family: 'Segoe UI','PingFang SC',Roboto,Arial,s
     <div class="signal-history-container" id="signalHistoryContainer">
       <div class="sh-title"><span>🕒 信号历史记录 (保留7天)</span><span id="shCount">0条</span></div>
       <div id="shSettings" style="display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:10px;color:#8aa0c8;margin:2px 0 6px;"><label>消失确认 <select id="sigConfirmSel" onchange="sigSetConfirm(this.value)" style="background:transparent;color:inherit;border:1px solid #555;border-radius:4px;font-size:10px;"><option value="0">不去抖</option><option value="120000">2分钟</option><option value="300000">5分钟</option><option value="600000">10分钟</option></select></label><label>止损/止盈 ATR周期 <select id="sigAtrTfSel" onchange="sigSetAtrTf(this.value)" style="background:transparent;color:inherit;border:1px solid #555;border-radius:4px;font-size:10px;"><option value="chart">跟随图表</option><option value="15m">15m</option><option value="1h">1h</option><option value="4h">4h</option><option value="1d">日线</option></select></label><label>Chandelier ATR倍数 <select id="sigChSel" onchange="sigSetChMult(this.value)" style="background:transparent;color:inherit;border:1px solid #555;border-radius:4px;font-size:10px;"><option value="2">2</option><option value="2.5">2.5</option><option value="3">3</option></select></label></div>
-      <div style="font-size:9px;color:#8aa0c8;margin:0 0 6px;">分批规则：1R 平半仓+保本 · 2R 剩余保本 · 2.5R 锁定 1.5R · 之后 Chandelier 无限追踪(止损只收紧)，最多追到 7R</div>
+      <div style="font-size:9px;color:#8aa0c8;margin:0 0 6px;">分批规则：1.5R 平半仓+保本 · 2R 剩余保本 · 2.5R 锁定 1.5R · 之后 Chandelier 无限追踪(止损只收紧)，最多追到 7R</div>
       <div id="shListContent">
         <div class="sh-empty">暂无信号记录</div>
       </div>
@@ -1621,7 +1621,7 @@ function updateMultiTfEntryUI() {
       var entryPrice = currentPrice || (ohlcData.length > 0 ? ohlcData[ohlcData.length-1].close : 0);
       var sl = isLong ? entryPrice - atrVal * ATR_MULTIPLIER : entryPrice + atrVal * ATR_MULTIPLIER;
       var tp = isLong ? entryPrice + atrVal * ATR_MULTIPLIER * SIG_MAX_R : entryPrice - atrVal * ATR_MULTIPLIER * SIG_MAX_R;
-      var p1Live = isLong ? entryPrice + atrVal * ATR_MULTIPLIER : entryPrice - atrVal * ATR_MULTIPLIER;
+      var p1Live = isLong ? entryPrice + atrVal * ATR_MULTIPLIER * SIG_PARTIAL_R : entryPrice - atrVal * ATR_MULTIPLIER * SIG_PARTIAL_R;
       sigEl.className = 'mte-signal ' + (isLong ? 'long' : 'short');
       sigEl.textContent = isLong ? ('🟢 LONG 买入信号 · 通过 '+m.longPass+'/'+m.longTotal) : ('🔴 SHORT 卖出信号 · 通过 '+m.shortPass+'/'+m.shortTotal);
       if (rtc) {
@@ -1629,7 +1629,7 @@ function updateMultiTfEntryUI() {
         rtcTitle.textContent = isLong ? '🟢 LONG 买入信号已触发' : '🔴 SHORT 卖出信号已触发';
         rtcEntry.textContent = '$' + entryPrice.toFixed(2);
         rtcSL.textContent = '$' + sl.toFixed(2);
-        rtcTP.textContent = '1R $' + p1Live.toFixed(2) + ' · 最高' + SIG_MAX_R + 'R $' + tp.toFixed(2);
+       rtcTP.textContent = SIG_PARTIAL_R + 'R $' + p1Live.toFixed(2) + ' · 最高' + SIG_MAX_R + 'R $' + tp.toFixed(2);
         rtcTime.textContent = formatFullDateTime(new Date());
         rtcStatus.textContent = '实时';
         rtcStatus.style.color = '#ffd700';
@@ -1738,7 +1738,7 @@ function processSignalHistory() {
       renderSignalHistory();
       showSignalAlert((activeType==='LONG'?'🟢 ':'🔴 ')+activeType+' 信号出现 · $'+priceNow.toFixed(2), activeType==='LONG'?'buy':'sell');
       if (typeof isTgReady === 'function' && isTgReady()) {
-        sendTelegramMessage('🚨 <b>多周期分层 '+activeType+' 信号出现</b>\n📊 品种: '+getSymbolDisplay(currentSymbol)+'\n💰 价格: $'+priceNow.toFixed(2)+'\n🛑 止损: $'+sl.toFixed(2)+'\n🎯 1R平半+保本: $'+p1.toFixed(2)+'\n🏁 最高'+SIG_MAX_R+'R: $'+tp.toFixed(2)+'\n🕐 时间: '+nowStr);
+        sendTelegramMessage('🚨 <b>多周期分层 '+activeType+' 信号出现</b>\n📊 品种: '+getSymbolDisplay(currentSymbol)+'\n💰 价格: $'+priceNow.toFixed(2)+'\n🛑 止损: $'+sl.toFixed(2)+'🎯 1.5R平半+保本: $'+p1.toFixed(2)+'\n🏁 最高'+SIG_MAX_R+'R: $'+tp.toFixed(2)+'\n🕐 时间: '+nowStr);
       }
     }
   }
@@ -1776,9 +1776,9 @@ function sigReconcile(m) {
 }
 // 每分钟用15m K线检查: 出现之后价格先碰到止损还是止盈(同一根K线都碰到按止损算,偏保守)
 // ==================== 📈 分批止盈 + Chandelier Exit 无限动态追踪(最高7R) ====================
-// 止损=1R | 浮盈1R: 平半仓+剩余止损移到入场价 | 浮盈2R: 剩余半仓保本(止损在入场价)
+// 止损=1R | 浮盈1.5R: 平半仓+剩余止损移到入场价 | 浮盈2R: 剩余半仓保本(止损在入场价)
 // 浮盈2.5R: 剩余止损锁定到+1.5R | 之后 Chandelier: 止损=最有利极值 ∓ N×ATR(只收紧不放松) | 最多追到7R平掉剩余
-var SIG_MAX_R = 7, SIG_CH_MULT = 3;
+var SIG_MAX_R = 7, SIG_PARTIAL_R = 1.5, SIG_CH_MULT = 3;
 try { var _cm = localStorage.getItem('sigChMult'); if (_cm !== null && !isNaN(+_cm)) SIG_CH_MULT = +_cm; } catch(e) {}
 function sigSetChMult(v) {
   SIG_CH_MULT = +v; try { localStorage.setItem('sigChMult', String(SIG_CH_MULT)); } catch(e) {}
@@ -1814,8 +1814,8 @@ function sigSimulate(raw, r) {
     var b = raw[k], tk = +b.time; if (tk <= r.appearMs) continue;   // 从出现之后的下一根K线开始
     // 1. 先判止损(用本根K线开始时的止损位, 同一根K线内偏保守)
     if (d === 1 ? b.low <= stop : b.high >= stop) { fill(trailUsed ? '追踪止损' : (s3 ? '锁1.5R止损' : (s1 ? '保本止损' : '止损')), stop, tk, f); lastT = tk; break; }
-    // 2. 里程碑: 1R平半+保本 → 2R保本 → 2.5R锁1.5R → 7R止盈
-    if (!s1 && reach(b, P(1))) { fill('1R平半', P(1), tk, 0.5); s1 = true; stop = better(stop, e); }
+    // 2. 里程碑: 1.5R平半+保本 → 2R保本 → 2.5R锁1.5R → 7R止盈
+    if (!s1 && reach(b, P(SIG_PARTIAL_R))) { fill('1.5R平半', P(SIG_PARTIAL_R), tk, 0.5); s1 = true; stop = better(stop, e); }
     if (s1 && !s2 && reach(b, P(2))) { s2 = true; stop = better(stop, e); legs.push({ n: '2R保本', p: P(2), t: tk, f: 0 }); }
     if (s1 && !s3 && reach(b, P(2.5))) { s3 = true; stop = better(stop, P(1.5)); legs.push({ n: '2.5R锁1.5R', p: P(2.5), t: tk, f: 0 }); }
     if (s1 && reach(b, P(SIG_MAX_R))) { fill(SIG_MAX_R + 'R止盈', P(SIG_MAX_R), tk, f); lastT = tk; break; }
@@ -1903,7 +1903,7 @@ function renderSignalHistory() {
     var slTpHtml = '';
     if (item.slPrice && item.tpPrice) {
       slTpHtml = isV2
-        ? '<span style="color:#ff6b6b;font-size:9px;">止损: $'+item.slPrice.toFixed(2)+'</span> <span style="color:#ffd700;font-size:9px;">1R: $'+(item.appearPrice + dd * risk0).toFixed(2)+'</span> <span style="color:#51cf66;font-size:9px;">最高'+SIG_MAX_R+'R: $'+(item.appearPrice + dd * SIG_MAX_R * risk0).toFixed(2)+'</span>'
+        ? '<span style="color:#ff6b6b;font-size:9px;">止损: $'+item.slPrice.toFixed(2)+'</span> <span style="color:#ffd700;font-size:9px;">1.5R: $'+(item.appearPrice + dd * SIG_PARTIAL_R * risk0).toFixed(2)+'</span> <span style="color:#51cf66;font-size:9px;">最高'+SIG_MAX_R+'R: $'+(item.appearPrice + dd * SIG_MAX_R * risk0).toFixed(2)+'</span>'
         : '<span style="color:#ff6b6b;font-size:9px;">止损: $'+item.slPrice.toFixed(2)+'</span> <span style="color:#51cf66;font-size:9px;">止盈: $'+item.tpPrice.toFixed(2)+'</span>';
     }
     var resHtml = '', fmtT = function(ms) { return formatFullDateTime(new Date(ms)).substring(5, 16); }, rr = function(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + 'R'; };
@@ -1914,7 +1914,7 @@ function renderSignalHistory() {
       else if (item.result === 'trail') { line = '🔄 追踪中 已实现 ' + rr(item.pnlR) + ' · 含浮动 ' + rr(item.openR) + ' · 最高到 ' + item.maxR.toFixed(1) + 'R'; col = '#4dd0e1'; }
       else { line = '⏳ 未到1R · 浮动 ' + rr(item.floatR || 0); }
       resHtml = '<span style="color:' + col + ';font-weight:bold;font-size:10px;">' + line + '</span>'
-        + '<div style="width:100%;font-size:9px;color:#8aa0c8;">①1R平半+保本 ' + ck(item.s1) + ' · ②2R保本 ' + ck(item.s2) + ' · ③2.5R锁1.5R ' + ck(item.s3) + ' · ④Chandelier追踪(最高' + SIG_MAX_R + 'R) ' + ck(item.trailUsed) + (item.result === 'trail' && item.stopNow ? ' · 当前止损 $' + item.stopNow.toFixed(2) : '') + '</div>'
+        + '<div style="width:100%;font-size:9px;color:#8aa0c8;">①1.5R平半+保本 ' + ck(item.s1) + ' · ②2R保本 ' + ck(item.s2) + ' · ③2.5R锁1.5R ' + ck(item.s3) + ' · ④Chandelier追踪(最高' + SIG_MAX_R + 'R) ' + ck(item.trailUsed) + (item.result === 'trail' && item.stopNow ? ' · 当前止损 $' + item.stopNow.toFixed(2) : '') + '</div>'
         + ((item.legs || []).length ? '<div style="width:100%;font-size:9px;color:#8aa0c8;">' + item.legs.map(function(l) { return l.n + '@' + l.p.toFixed(2); }).join(' → ') + '</div>' : '');
     } else {
       var slD = risk0, tpR = Math.abs((item.tpPrice || 0) - (item.appearPrice || 0)) / slD, legacy = ' <span style="color:#90a4ae;font-weight:normal;">(旧规则:固定止损止盈)</span>';
